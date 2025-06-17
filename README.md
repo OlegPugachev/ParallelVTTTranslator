@@ -22,9 +22,6 @@ Ensure you have Go (1.18+) and Docker installed.
 
 ### 2. Launch LibreTranslate
 
-
-### 2. Launch LibreTranslate
-
 ```bash
 bash run_libretranslate.sh
 ```

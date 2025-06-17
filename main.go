@@ -223,6 +223,7 @@ func processFile(inputPath, lang string) error {
 			defer wg.Done()
 			defer sem.Release(1)
 
+			// Skipping subtitle service lines
 			if strings.Contains(l.text, "-->") || strings.TrimSpace(l.text) == "" || l.text == "WEBVTT" {
 				results[l.index] = l.text
 				_ = globalBar.Add(1)
@@ -231,8 +232,8 @@ func processFile(inputPath, lang string) error {
 
 			translated, err := translateText(l.text, lang)
 			if err != nil {
-				logError(fmt.Sprintf("Line error '%s': %v", l.text, err))
-				results[l.index] = l.text
+				logError(fmt.Sprintf("Line error in file '%s' [line %d]: '%s' — %v", inputPath, l.index+1, l.text, err))
+				results[l.index] = l.text // Сохраняем оригинал при ошибке
 			} else {
 				results[l.index] = translated
 				atomic.AddInt64(&lineCounter, 1)

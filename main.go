@@ -1,4 +1,3 @@
-// main.go - improved with global progress bar and ETA
 package main
 
 import (
@@ -8,6 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -91,6 +91,12 @@ func main() {
 			progressbar.OptionFullWidth())
 		err = processDirectory(inputPath, targetLang)
 	} else {
+		globalBar = progressbar.NewOptions(1,
+			progressbar.OptionSetDescription("Progress"),
+			progressbar.OptionShowCount(),
+			progressbar.OptionShowIts(),
+			progressbar.OptionSetPredictTime(true),
+			progressbar.OptionFullWidth())
 		err = processFile(inputPath, targetLang)
 	}
 
@@ -102,10 +108,15 @@ func main() {
 	}
 }
 
+func isSubtitleFile(name string) bool {
+	lower := strings.ToLower(name)
+	return strings.HasSuffix(lower, ".vtt") || strings.HasSuffix(lower, ".srt")
+}
+
 func countTotalLines(root string) int {
 	var total int64
 	errWalk := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if err == nil && !info.IsDir() && !strings.HasPrefix(info.Name(), ".") && strings.HasSuffix(strings.ToLower(info.Name()), ".vtt") {
+		if err == nil && !info.IsDir() && !strings.HasPrefix(info.Name(), ".") && isSubtitleFile(info.Name()) {
 			f, err := os.Open(path)
 			if err == nil {
 				scanner := bufio.NewScanner(f)
@@ -137,7 +148,7 @@ func processDirectory(dirPath, lang string) error {
 			return nil
 		}
 
-		if !info.IsDir() && !strings.HasPrefix(info.Name(), ".") && strings.HasSuffix(strings.ToLower(info.Name()), ".vtt") {
+		if !info.IsDir() && !strings.HasPrefix(info.Name(), ".") && isSubtitleFile(info.Name()) {
 			wg.Add(1)
 			if err := sem.Acquire(context.Background(), 1); err != nil {
 				logError(fmt.Sprintf("Semaphore error: %v", err))
@@ -171,7 +182,12 @@ func processFile(inputPath, lang string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			logError(fmt.Sprintf("Failed to close file %s: %v", inputPath, err))
+		}
+	}(file)
 
 	scanner := bufio.NewScanner(file)
 	type indexedLine struct {
@@ -263,7 +279,12 @@ func translateText(text, lang string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			logError(fmt.Sprintf("Failed to close response body: %v", err))
+		}
+	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("API response: %s", resp.Status)
@@ -287,5 +308,8 @@ func getOutputPath(inputPath, lang string) string {
 
 func logError(message string) {
 	fmt.Println("⚠️", message)
-	errorLog.WriteString(message + "\n")
+	_, err := errorLog.WriteString(message + "\n")
+	if err != nil {
+		return
+	}
 }

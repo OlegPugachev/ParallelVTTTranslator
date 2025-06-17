@@ -1,13 +1,13 @@
 # vtt-translator
 
-`vtt-translator` is a CLI tool for batch-translating `.vtt` subtitle files 
+`vtt-translator` is a CLI tool for batch-translating `.vtt`, `.srt` subtitle files 
 from English into a specified language using a local
 [LibreTranslate](https://github.com/LibreTranslate/LibreTranslate) API. 
 It supports parallel processing, translation caching, and a global progress bar with ETA.
 
 ## 📦 Features
 
-- 🔁 Recursively translates all `.vtt` files in a directory
+- 🔁 Recursively translates all `.vtt`, `.srt`  files in a directory
 - ⚡ Parallel processing with configurable worker count
 - 📊 Global progress bar with ETA
 - 🧠 Translation string caching to reduce API requests
@@ -43,7 +43,7 @@ LibreTranslate will launch on a free port. By default, the script loads English 
 
 ### Parameters:
 
---input — path to a .vtt file or directory
+--input — path to a .vtt or .srt file or directory
 
 --lang — target translation language (default: ru)
 
@@ -53,6 +53,7 @@ LibreTranslate will launch on a free port. By default, the script loads English 
 Each input file will be saved with a _<lang>.vtt suffix, e.g.:
 
 example.vtt → example_ru.vtt
+example.srt → example_ru.srt
 
 ### ⚠️ Limitations
 LibreTranslate must be available at http://localhost:5001/translate
